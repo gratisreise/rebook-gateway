@@ -3,7 +3,7 @@ server:
 
 sentry:
   dsn: ${SENTRY_DSN}
-  send-default-pii: true
+  send-default-pii: false
 
 jwt:
   secret: ${JWT_SECRET}

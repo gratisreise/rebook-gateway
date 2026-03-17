@@ -1,6 +1,5 @@
 package com.example.rebookgateway;
 
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -13,9 +12,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-
-//일반 요청 => 패스포트 필요
-//인즈&인가 요청 => 그냥 바로 서비스로 이어줌
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -24,53 +20,85 @@ public class CustomFilter implements GlobalFilter, Ordered {
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String PASSPORT_HEADER = "X-Passport";
+
     private final JwtUtil jwtUtil;
     private final WebClient.Builder lbWebClient;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String uri = exchange.getRequest().getPath().toString();
-        log.info("uri: {}", uri);
+        String method = exchange.getRequest().getMethod().name();
+        log.info("Request: {} {}", method, uri);
 
-        // 인증 & 인가 요청
-        if (uri.startsWith("/api/auth")) {
-            return chain.filter(exchange);
-        }
-        // swagger api 문서 요청
-        if (uri.startsWith("/swagger-ui") || uri.startsWith("/v3/api-docs") || uri.startsWith(
-            "/swagger-resources")) {
+        // 1. 인증 불필요 경로
+        if (isPublicPath(uri)) {
             return chain.filter(exchange);
         }
 
-        // 웹소켓 요청
-        if (uri.startsWith("/api/ws-chat")) {
-            return webSocketConnect(exchange, chain);
+        // 2. WebSocket 연결
+        if (isWebSocketRequest(uri)) {
+            return handleWebSocket(exchange, chain);
         }
 
-        //토큰추출
-        String token = getToken(exchange);
-
-        if (token.isBlank()) { // 없으면 SSE연결이라고?? => 개선해야할 듯 연결조건자체를 변경해봐야할 듯
-            Map<String, String> params = exchange.getRequest().getQueryParams().toSingleValueMap();
-            token = params.get("token");
-            if (token == null || token.isBlank() || !jwtUtil.validateToken(token)) {
-                return onError(exchange);
-            }
-            log.info("sse토큰:{}", token);
+        // 3. SSE 연결
+        if (isSSERequest(uri)) {
+            return handleSSE(exchange, chain);
         }
-        log.info("token: {}", token);
 
-        //토큰검증
-        if (token == null || token.isBlank() || !jwtUtil.validateToken(token)) {
-            log.error("토큰이 없거나 유효하지 않음");
+        // 4. REST API
+        return handleRestApi(exchange, chain);
+    }
+
+    private boolean isPublicPath(String uri) {
+        return uri.startsWith("/api/auth")
+            || uri.startsWith("/swagger-ui")
+            || uri.startsWith("/v3/api-docs")
+            || uri.startsWith("/swagger-resources")
+            || uri.equals("/favicon.ico");
+    }
+
+    private boolean isWebSocketRequest(String uri) {
+        return uri.startsWith("/api/ws-chat");
+    }
+
+    private boolean isSSERequest(String uri) {
+        return uri.startsWith("/api/notifications/sse");
+    }
+
+    private Mono<Void> handleWebSocket(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String token = exchange.getRequest().getQueryParams().getFirst("token");
+
+        if (token == null || !jwtUtil.validateToken(token)) {
+            log.error("WebSocket connection rejected: invalid or missing token");
             return onError(exchange);
         }
 
         return getPassport(exchange, chain, token);
     }
 
-    private Mono<Void> getPassport(ServerWebExchange exchange, GatewayFilterChain chain,
-        String token) {
+    private Mono<Void> handleSSE(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String token = exchange.getRequest().getQueryParams().getFirst("token");
+
+        if (token == null || !jwtUtil.validateToken(token)) {
+            log.error("SSE connection rejected: invalid or missing token");
+            return onError(exchange);
+        }
+
+        return getPassport(exchange, chain, token);
+    }
+
+    private Mono<Void> handleRestApi(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String token = getToken(exchange);
+
+        if (token.isBlank() || !jwtUtil.validateToken(token)) {
+            log.error("REST API rejected: missing or invalid Authorization header");
+            return onError(exchange);
+        }
+
+        return getPassport(exchange, chain, token);
+    }
+
+    private Mono<Void> getPassport(ServerWebExchange exchange, GatewayFilterChain chain, String token) {
         return lbWebClient
             .build()
             .post()
@@ -89,19 +117,6 @@ public class CustomFilter implements GlobalFilter, Ordered {
                     .build();
                 return chain.filter(exchange.mutate().request(mutatedRequest).build());
             });
-    }
-
-    private Mono<Void> webSocketConnect(ServerWebExchange exchange, GatewayFilterChain chain) {
-        Map<String, String> params = exchange.getRequest().getQueryParams().toSingleValueMap();
-        String token = params.get("token");
-        log.info("웹소켓연결");
-
-        if (token != null && !jwtUtil.validateToken(token)) {
-            log.error("토큰이 없거나 유효하지 않음");
-            return onError(exchange);
-        }
-
-        return chain.filter(exchange);
     }
 
     private String getToken(ServerWebExchange exchange) {

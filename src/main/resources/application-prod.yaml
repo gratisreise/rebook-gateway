@@ -1,11 +1,15 @@
 spring:
   cloud:
     gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
       globalcors:
+        add-to-simple-url-handler-mapping: true
         cors-configurations:
           '[/**]':
             allowedOrigins:
-              - "http://localhost:5173"
               - "https://rebookk.click"
             allowedMethods:
               - GET
@@ -16,6 +20,7 @@ spring:
               - PATCH
             allowedHeaders: "*"
             allowCredentials: true
+            maxAge: 3600
       routes:
         - id: rebook-user
           uri: lb://USER-SERVICE
@@ -24,7 +29,7 @@ spring:
         - id: rebook-auth
           uri: lb://AUTH-SERVICE
           predicates:
-            - Path=/api/auth/**, /passports
+            - Path=/api/auth/**
         - id: rebook-book
           uri: lb://BOOK-SERVICE
           predicates:
@@ -52,26 +57,13 @@ management:
       exposure:
         include: health,info,prometheus
 
-springdoc:
-  swagger-ui:
-    urls:
-      - name: rebook-user
-        url: /api/users/v3/api-docs
-      - name: rebook-book
-        url: /api/books/v3/api-docs
-      - name: rebook-trading
-        url: /api/tradings/v3/api-docs
-      - name: rebook-chat
-        url: /api/chats/v3/api-docs
-      - name: rebook-notification
-        url: /api/notifications/v3/api-docs
-
 eureka:
   client:
     service-url:
       defaultZone: http://rebook-eureka:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
+    registry-fetch-interval-seconds: 10
   instance:
     instance-id: ${spring.application.name}:origin
-
+    prefer-ip-address: true

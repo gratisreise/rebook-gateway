@@ -40,4 +40,6 @@ out/
 
 
 GEMINI.md
-CLAUDE.md
+.claude/CLAUDE.md
+.serena
+.claude

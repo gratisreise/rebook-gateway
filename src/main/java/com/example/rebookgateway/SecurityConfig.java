@@ -9,6 +9,18 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 @Configuration
 public class SecurityConfig {
 
+    @Bean
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+        return http
+            .csrf(ServerHttpSecurity.CsrfSpec::disable)
+            .authorizeExchange(exchange -> exchange
+                .pathMatchers(WHITE_LIST).permitAll() // 배열을 그대로 사용
+                .pathMatchers(SERVICES).permitAll()
+                .anyExchange().authenticated()
+            )
+            .build();
+    }
+
 
     private static final String[] SERVICES = {
         "/api/auth/**", // auth
@@ -25,27 +37,11 @@ public class SecurityConfig {
         "/actuator/**",
         "/eureka/**",
         "/swagger-ui.html",
-        "/favicon.ico ",
+        "/favicon.ico",
         "/webjars/**",
         "/swagger-ui/**",
         "/swagger-resources/**",
         "/v3/api-docs/**",
     };
-
-    @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
-        return http
-            .csrf(ServerHttpSecurity.CsrfSpec::disable)
-//            .authorizeExchange(exchange -> exchange
-//                .anyExchange().permitAll()
-//            )
-            .authorizeExchange(exchange -> exchange
-                .pathMatchers(WHITE_LIST).permitAll() // 배열을 그대로 사용
-                .pathMatchers(SERVICES).permitAll()
-                .anyExchange().authenticated()
-            )
-            .build();
-    }
-
 }
 

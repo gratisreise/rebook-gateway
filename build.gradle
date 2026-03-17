@@ -1,7 +1,7 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.3.13'
-    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.springframework.boot' version "${springBootVersion}"
+    id 'io.spring.dependency-management' version "${springDependencyManagementVersion}"
 }
 
 group = 'com.example'
@@ -23,10 +23,6 @@ repositories {
     mavenCentral()
 }
 
-ext {
-    set('sentryVersion', "8.13.2")
-    set('springCloudVersion', "2023.0.5")
-}
 
 dependencies {
     //모니터링
@@ -35,12 +31,9 @@ dependencies {
 
     //보안
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
-
-    // api 문서화
-    implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.6.0'
+    implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
+    runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
+    runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
 
 
     //로깅알람

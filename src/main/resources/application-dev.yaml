@@ -9,7 +9,7 @@ spring:
         - id: rebook-auth
           uri: lb://AUTH-SERVICE
           predicates:
-            - Path=/api/auth/**, /passports/**
+            - Path=/api/auth/**
         - id: rebook-book
           uri: lb://BOOK-SERVICE
           predicates:
@@ -34,8 +34,10 @@ spring:
       discovery:
         locator:
           enabled: true
+          lower-case-service-id: true
       globalcors:
-        corsConfigurations:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
           '[/**]':
             allowedOrigins:
               - "http://localhost:5173"
@@ -47,9 +49,9 @@ spring:
               - DELETE
               - OPTIONS
               - PATCH
-            allowedHeaders: '*'
+            allowedHeaders: "*"
             allowCredentials: true
-        add-to-simple-url-handler-mapping: true
+            maxAge: 3600
 
 eureka:
   client:
@@ -57,22 +59,10 @@ eureka:
       defaultZone: http://rebook-eureka:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
+    registry-fetch-interval-seconds: 5
   instance:
     instance-id: ${spring.application.name}:origin
-
-springdoc:
-  swagger-ui:
-    urls:
-      - name: rebook-user
-        url: /api/users/v3/api-docs
-      - name: rebook-book
-        url: /api/books/v3/api-docs
-      - name: rebook-trading
-        url: /api/tradings/v3/api-docs
-      - name: rebook-chat
-        url: /api/chats/v3/api-docs
-      - name: rebook-notification
-        url: /api/notifications/v3/api-docs
+    prefer-ip-address: true
 
 management:
   endpoints:
