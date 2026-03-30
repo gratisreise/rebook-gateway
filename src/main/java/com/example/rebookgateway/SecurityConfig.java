@@ -14,9 +14,9 @@ public class SecurityConfig {
         return http
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .authorizeExchange(exchange -> exchange
-                .pathMatchers(WHITE_LIST).permitAll() // 배열을 그대로 사용
+                .pathMatchers(WHITE_LIST).permitAll()
                 .pathMatchers(SERVICES).permitAll()
-                .anyExchange().authenticated()
+                .anyExchange().denyAll()
             )
             .build();
     }
@@ -38,10 +38,7 @@ public class SecurityConfig {
         "/eureka/**",
         "/swagger-ui.html",
         "/favicon.ico",
-        "/webjars/**",
-        "/swagger-ui/**",
-        "/swagger-resources/**",
-        "/v3/api-docs/**",
+        "/webjars/**"
     };
 }
 

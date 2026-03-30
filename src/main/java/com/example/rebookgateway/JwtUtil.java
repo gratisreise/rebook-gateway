@@ -36,7 +36,7 @@ public class JwtUtil {
                 .parseSignedClaims(token);
             return true;
         } catch (RuntimeException e) {
-            log.debug("Token validation failed: {}", e.getClass().getSimpleName());
+            log.debug("토큰 검증 실패: {}", e.getClass().getSimpleName());
             return false;
         }
     }

@@ -28,7 +28,7 @@ public class CustomFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String uri = exchange.getRequest().getPath().toString();
         String method = exchange.getRequest().getMethod().name();
-        log.info("Request: {} {}", method, uri);
+        log.info("요청: {} {}", method, uri);
 
         // 1. 인증 불필요 경로
         if (isPublicPath(uri)) {
@@ -49,27 +49,11 @@ public class CustomFilter implements GlobalFilter, Ordered {
         return handleRestApi(exchange, chain);
     }
 
-    private boolean isPublicPath(String uri) {
-        return uri.startsWith("/api/auth")
-            || uri.startsWith("/swagger-ui")
-            || uri.startsWith("/v3/api-docs")
-            || uri.startsWith("/swagger-resources")
-            || uri.equals("/favicon.ico");
-    }
-
-    private boolean isWebSocketRequest(String uri) {
-        return uri.startsWith("/api/ws-chat");
-    }
-
-    private boolean isSSERequest(String uri) {
-        return uri.startsWith("/api/notifications/sse");
-    }
-
     private Mono<Void> handleWebSocket(ServerWebExchange exchange, GatewayFilterChain chain) {
         String token = exchange.getRequest().getQueryParams().getFirst("token");
 
         if (token == null || !jwtUtil.validateToken(token)) {
-            log.error("WebSocket connection rejected: invalid or missing token");
+            log.error("WebSocket 연결 거부: 토큰이 없거나 유효하지 않음");
             return onError(exchange);
         }
 
@@ -80,7 +64,7 @@ public class CustomFilter implements GlobalFilter, Ordered {
         String token = exchange.getRequest().getQueryParams().getFirst("token");
 
         if (token == null || !jwtUtil.validateToken(token)) {
-            log.error("SSE connection rejected: invalid or missing token");
+            log.error("SSE 연결 거부: 토큰이 없거나 유효하지 않음");
             return onError(exchange);
         }
 
@@ -91,7 +75,7 @@ public class CustomFilter implements GlobalFilter, Ordered {
         String token = getToken(exchange);
 
         if (token.isBlank() || !jwtUtil.validateToken(token)) {
-            log.error("REST API rejected: missing or invalid Authorization header");
+            log.error("REST API 거부: Authorization 헤더가 없거나 유효하지 않음");
             return onError(exchange);
         }
 
@@ -130,6 +114,22 @@ public class CustomFilter implements GlobalFilter, Ordered {
     private Mono<Void> onError(ServerWebExchange exchange) {
         exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
         return exchange.getResponse().setComplete();
+    }
+
+    private boolean isWebSocketRequest(String uri) {
+        return uri.startsWith("/api/ws-chat");
+    }
+
+    private boolean isSSERequest(String uri) {
+        return uri.startsWith("/api/notifications/sse");
+    }
+
+    private boolean isPublicPath(String uri) {
+        return uri.startsWith("/api/auth")
+            || uri.startsWith("/swagger-ui")
+            || uri.startsWith("/v3/api-docs")
+            || uri.startsWith("/swagger-resources")
+            || uri.equals("/favicon.ico");
     }
 
     @Override
